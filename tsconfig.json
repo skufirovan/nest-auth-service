@@ -19,6 +19,7 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
+    "jsx": "react",
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
