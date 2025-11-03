@@ -4,9 +4,7 @@ import { Options } from '@/auth/provider/provider.constants'
 import { GoogleProvider } from '@/auth/provider/services/google.provider'
 import { YandexProvider } from '@/auth/provider/services/yandex.provider'
 
-export const getProvidersConfig = async (
-  configService: ConfigService
-): Promise<Options> => ({
+export const getProvidersConfig = (configService: ConfigService): Options => ({
   baseUrl: configService.getOrThrow<string>('APPLICATION_URL'),
   services: [
     new GoogleProvider({

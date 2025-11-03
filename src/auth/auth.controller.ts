@@ -59,7 +59,7 @@ export class AuthController {
 
   @UseGuards(ProviderGuard)
   @Get('oauth/connect/:provider')
-  public async connect(@Param('provider') provider: string) {
+  public connect(@Param('provider') provider: string) {
     const providerInstance = this.providerService.findByService(provider)
 
     return {

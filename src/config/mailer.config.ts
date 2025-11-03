@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config'
 
 import { isDev } from '@/libs/common/utils/is-dev.utils'
 
-export const getMailerConfig = async (
+export const getMailerConfig = (
   configService: ConfigService
-): Promise<MailerOptions> => ({
+): MailerOptions => ({
   transport: {
     host: configService.getOrThrow<string>('MAIL_HOST'),
     port: configService.getOrThrow<string>('MAIL_PORT'),
