@@ -14,7 +14,8 @@ export class UserService {
     password: string,
     username: string,
     method: AuthMethod,
-    picture?: string
+    picture?: string,
+    isVerified?: boolean
   ) {
     const user = await this.prisma.user.create({
       data: {
@@ -23,6 +24,7 @@ export class UserService {
         username,
         picture,
         method,
+        isVerified,
       },
       include: { accounts: true },
     })

@@ -10,16 +10,20 @@ import { AuthMethod, User } from '@prisma/__generated__'
 import { hash, verify } from 'argon2'
 import type { Request, Response } from 'express'
 
+import { PrismaService } from '@/prisma/prisma.service'
 import { UserService } from '@/user/user.service'
 
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
+import { ProviderService } from './provider/provider.service'
 
 @Injectable()
 export class AuthService {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly userService: UserService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly providerService: ProviderService
   ) {}
 
   async register(req: Request, dto: RegisterDto) {
@@ -55,6 +59,57 @@ export class AuthService {
       throw new UnauthorizedException(
         'Неверный пароль. Попробуйте еще раз или восстановите пароль'
       )
+    }
+
+    return this.saveSession(req, user)
+  }
+
+  public async extractProfileFromCode(
+    req: Request,
+    provider: string,
+    code: string
+  ) {
+    const providerInstance = this.providerService.findByService(provider)
+
+    if (!providerInstance) return
+
+    const profile = await providerInstance.findUserByCode(code)
+
+    const account = await this.prisma.account.findFirst({
+      where: {
+        id: profile.id,
+        provider: profile.provider,
+      },
+    })
+
+    let user = account?.userId
+      ? await this.userService.findById(account.userId)
+      : null
+
+    if (user) {
+      return this.saveSession(req, user)
+    }
+
+    user = await this.userService.create(
+      profile.email,
+      '',
+      profile.name,
+      AuthMethod[profile.provider.toUpperCase()],
+      profile.picture,
+      true
+    )
+
+    if (!account) {
+      await this.prisma.account.create({
+        data: {
+          userId: user.id,
+          type: 'oauth',
+          provider: profile.provider,
+          accessToken: profile.access_token,
+          refreshToken: profile.refresh_token,
+          expiresAt: Number(profile.expires_at),
+        },
+      })
     }
 
     return this.saveSession(req, user)
