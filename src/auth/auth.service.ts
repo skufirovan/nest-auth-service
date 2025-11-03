@@ -5,11 +5,13 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common'
+import { forwardRef, Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AuthMethod, User } from '@prisma/__generated__'
 import { hash, verify } from 'argon2'
 import type { Request, Response } from 'express'
 
+import { EmailService } from '@/libs/email/email.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { UserService } from '@/user/user.service'
 
@@ -22,11 +24,13 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
+    @Inject(forwardRef(() => EmailService))
+    private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     private readonly providerService: ProviderService
   ) {}
 
-  async register(req: Request, dto: RegisterDto) {
+  async register(dto: RegisterDto) {
     const isExist = await this.userService.findByEmail(dto.email)
 
     if (isExist) {
@@ -41,7 +45,12 @@ export class AuthService {
       AuthMethod.CREDENTIALS
     )
 
-    return this.saveSession(req, user)
+    await this.emailService.sendConfirmationEmail(user.email)
+
+    return {
+      message:
+        'Вы успешно зарегистрировались. Пожалуйста, подтвердите ваш email. Сообщение было отправлено на ваш почтовый адрес.',
+    }
   }
 
   async login(req: Request, dto: LoginDto) {
@@ -61,14 +70,17 @@ export class AuthService {
       )
     }
 
+    if (!user.isVerified) {
+      await this.emailService.sendConfirmationEmail(user.email)
+      throw new UnauthorizedException(
+        'Ваш email не подтвержден. Ссылка для подтверждения отправлена вам на почту'
+      )
+    }
+
     return this.saveSession(req, user)
   }
 
-  public async extractProfileFromCode(
-    req: Request,
-    provider: string,
-    code: string
-  ) {
+  async extractProfileFromCode(req: Request, provider: string, code: string) {
     const providerInstance = this.providerService.findByService(provider)
 
     if (!providerInstance) return
@@ -132,7 +144,7 @@ export class AuthService {
     })
   }
 
-  private async saveSession(req: Request, user: User) {
+  async saveSession(req: Request, user: User) {
     return new Promise((resolve, reject) => {
       req.session.userId = user.id
 

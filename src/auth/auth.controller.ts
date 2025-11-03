@@ -30,8 +30,8 @@ export class AuthController {
 
   @Recaptcha()
   @Post('register')
-  async register(@Req() req: Request, @Body() dto: RegisterDto) {
-    return this.authService.register(req, dto)
+  async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto)
   }
 
   @Recaptcha()
