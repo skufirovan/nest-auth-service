@@ -27,6 +27,13 @@ export class EmailService {
     return this.sendMail(email, 'Сброс пароля', html)
   }
 
+  async sendTwoFactorTokenEmail(email: string, token: string) {
+    const domain = this.configService.getOrThrow<string>('ALLOWED_ORIGIN')
+    const html = await render(ResetPasswordTemplate({ domain, token }))
+
+    return this.sendMail(email, 'Код подтверждения', html)
+  }
+
   private sendMail(email: string, subject: string, html: string) {
     return this.mailerService.sendMail({
       to: email,
