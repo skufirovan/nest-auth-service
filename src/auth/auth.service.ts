@@ -1,22 +1,23 @@
 import {
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common'
-import { forwardRef, Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AuthMethod, User } from '@prisma/__generated__'
 import { hash, verify } from 'argon2'
 import type { Request, Response } from 'express'
 
-import { EmailService } from '@/libs/email/email.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { UserService } from '@/user/user.service'
 
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
+import { EmailConfirmationService } from './email-confirmation/email-confirmation.service'
 import { ProviderService } from './provider/provider.service'
 
 @Injectable()
@@ -24,8 +25,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
-    @Inject(forwardRef(() => EmailService))
-    private readonly emailService: EmailService,
+    @Inject(forwardRef(() => EmailConfirmationService))
+    private readonly emailConfirmationService: EmailConfirmationService,
     private readonly configService: ConfigService,
     private readonly providerService: ProviderService
   ) {}
@@ -45,7 +46,7 @@ export class AuthService {
       AuthMethod.CREDENTIALS
     )
 
-    await this.emailService.sendConfirmationEmail(user.email)
+    await this.emailConfirmationService.sendConfirmationToken(user.email)
 
     return {
       message:
@@ -71,7 +72,7 @@ export class AuthService {
     }
 
     if (!user.isVerified) {
-      await this.emailService.sendConfirmationEmail(user.email)
+      await this.emailConfirmationService.sendConfirmationToken(user.email)
       throw new UnauthorizedException(
         'Ваш email не подтвержден. Ссылка для подтверждения отправлена вам на почту'
       )

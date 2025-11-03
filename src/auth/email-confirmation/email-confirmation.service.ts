@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
@@ -7,6 +9,7 @@ import { TokenType } from '@prisma/__generated__'
 import { Request } from 'express'
 import { v4 } from 'uuid'
 
+import { EmailService } from '@/libs/email/email.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { UserService } from '@/user/user.service'
 
@@ -19,7 +22,9 @@ export class EmailConfirmationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
-    private readonly authService: AuthService
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
+    private readonly emailService: EmailService
   ) {}
 
   async confirmEmail(req: Request, dto: ConfirmationDto) {
@@ -62,6 +67,15 @@ export class EmailConfirmationService {
     })
 
     return this.authService.saveSession(req, existingUser)
+  }
+
+  async sendConfirmationToken(email: string) {
+    const verificationToken = await this.createConfirmationToken(email)
+
+    await this.emailService.sendConfirmationEmail(
+      verificationToken.email,
+      verificationToken.token
+    )
   }
 
   async createConfirmationToken(email: string) {

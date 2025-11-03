@@ -1,9 +1,7 @@
 import { MailerService } from '@nestjs-modules/mailer'
-import { forwardRef, Inject, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { render } from '@react-email/components'
-
-import { EmailConfirmationService } from '@/auth/email-confirmation/email-confirmation.service'
 
 import { ConfirmationTemplate } from './templates/confirmation.template'
 
@@ -11,15 +9,10 @@ import { ConfirmationTemplate } from './templates/confirmation.template'
 export class EmailService {
   constructor(
     private readonly mailerService: MailerService,
-    private readonly configService: ConfigService,
-    @Inject(forwardRef(() => EmailConfirmationService))
-    private readonly emailConfirmationService: EmailConfirmationService
+    private readonly configService: ConfigService
   ) {}
 
-  async sendConfirmationEmail(email: string) {
-    const { token } =
-      await this.emailConfirmationService.createConfirmationToken(email)
-
+  async sendConfirmationEmail(email: string, token: string) {
     const domain = this.configService.getOrThrow<string>('ALLOWED_ORIGIN')
     const html = await render(ConfirmationTemplate({ domain, token }))
 
